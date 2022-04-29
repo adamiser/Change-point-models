@@ -1,0 +1,462 @@
+---
+title: "All in One Place"
+author: "Abe Durrant"
+date: "4/29/2022"
+output: pdf_document
+---
+
+This markdown file will include all the relevant code I have used plus descriptions of what is going on. I will also include my presentation slides from the student research conference for more background info to help cover what has been worked on for the most part.
+
+Each section of code included is part of a building up toward our eventual goal of fitting a model on each county in NY. We want to model the ordinal data with a possible change point (or more than 1). We also want to account for temporal correlation between observations. The code included builds up from a basic nimble model on normal continuous random variable to where we are currently working with the ordinal data.
+
+## Basic Nimble Code
+The first code is the simplest case I worked on which was mostly to gain familiarity with nimble. This should give you a basic idea of how to define a Nimble model to estimate parameters (in this case the betas). I haven't tested this in a while, but one thing to be aware of is the following error:
+
+Error: Failed to create the shared library.
+
+Or something similar. If you have more insights into this error than great, but from what I can tell it is a problem with either rTools not installed correctly on your computer or a memory issue. If you run into this you probably just need to run the code on the stat department computing machines as it works there.
+```{r}
+#Practicing on a generic nimble model to understand
+library(nimble, warn.conflicts = FALSE)
+set.seed(1)
+
+#Simulating the data of a normal distribution ----------------------------
+p <- 15    # number of explanatory variables
+n <- 100   # number of observations
+X <- matrix(rnorm(p*n), nrow = n, ncol = p) # explanatory variables
+true_betas <- c(c(0.1, 0.2, 0.3, 0.4, 0.5), rep(0, p-5)) # coefficients
+sigma <- 1
+y <- rnorm(n, X %*% true_betas, sigma)
+# -------------------------------------------------------------------------
+
+#Defining NIMBLE Code ----------------------------------------------------
+code <- nimbleCode({
+  beta0 ~ dnorm(0, sd = 100)
+  beta1 ~ dnorm(0, sd = 100)
+  beta2 ~ dnorm(0, sd = 100)
+  sigma ~ dunif(0, 100)        # prior for variance components based on Gelman (2006)
+  for(i in 1:n) {
+    y[i] ~ dnorm(beta0 + beta1*x1[i] + beta2*x2[i], sd = sigma) # manual entry of linear predictors
+  }
+})
+
+##### --------------------------------------------------------------------
+
+#Defining what our data and variables are, what are constants and what initial values we want
+x1 <- X[,1] - mean(X[,1])
+x2 <- X[,2] - mean(X[,2])
+
+constants <- list(n = n, x1 = x1, x2 = x2)
+data <- list(y = y)
+inits <- list(beta0 = mean(y), beta1 = 0, beta2 = 0, sigma = 1)
+
+#Configuring and compiling the model, you can then look at output if you want ----------
+model <- nimbleModel(code, constants = constants, data = data, inits = inits)
+mcmcConf <- configureMCMC(model)
+cmodel <- compileNimble(model, showCompilerOutput = TRUE)
+```
+
+## Change Point Simple Model
+
+The following model is a step up and accounts for our change point denoted as Tau. This model only looks to find one change point and can account for the variance being different before and after the change point. The setup is similar to the above, we just have more parameters that we are estimating now.
+
+This model introduces our weird indicator function. Nimble won't let us do if-else statements on the parameters we are estimating so I came up with a function that evaluates to 0 or 1 depending on if we are before or after the change point. Basically you take the difference between tau and what time you are at and at that to the absolute value of the difference. Then you divide by 2 multiplied by the difference and dependent on if the change point is before tau or not it will evaluate to 0 or 1. You then reverse it to indicate if it is after tau.
+
+The only drawback to this indicator function is that you can't have a starting estimate of tau that is an integer as the function will evaluate to infinity. As long as you have tau as some number that contains a decimal to start then you should be good as the probability that it gets estimated to be an exact integer is 0 (in theory).
+
+The indicator function is implemented in both the simulation of the data and in the nimble code, so you can check it out below to see how it works more.
+```{r}
+library(nimble, warn.conflicts = FALSE)
+library(MASS)
+
+
+#Simulate the Data
+X <- seq(1,100,1)
+n = 100
+y <- mvrnorm(1, X*4, diag(n)*10)
+
+#Simulated parameters
+tau <- 50.1
+beta1 <- 2
+beta2 <- 4
+sigma1 <- 4
+sigma2 <- 8
+for(i in 1:n) {
+  y[i] <- rnorm(1 , beta1 * X[i] * ( ( ( tau - i ) + abs(tau - i) ) / (2 * ( tau - i ) ) ) + beta2 *X[i] * 
+                  ( ( ( i - tau ) + abs(i - tau) ) / (2 * ( i - tau ) ) ), 
+                sigma1 * (((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+                            sigma2 * (((i-tau) + abs(i-tau)) / (2 * (i-tau))))) 
+}
+plot(X,y)
+lines(X,y)
+
+
+#Nimble Code
+code <- nimbleCode({
+  beta1 ~ dnorm(0, sd = 200)
+  beta2 ~ dnorm(0, sd = 200) 
+  sigma1 ~ dgamma(0.1,0.1)
+  sigma2 ~ dgamma(0.1,0.1)
+  tau ~ dunif(0,100)
+  for(i in 1:n) {
+    y[i] ~ dnorm(beta1 * x1[i] * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+                   beta2*x1[i] * ((i-tau) + abs(i-tau)) / (2 * (i-tau)), 
+                 sd = sigma1 * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+                   sigma2 * ((i-tau) + abs(i-tau)) / (2 * (i-tau))) 
+    
+  }
+})
+
+
+#Create Model
+x1 <- X
+constants <- list(n = n, x1 = x1, t = t)
+data <- list(y = y)
+inits <- list(beta1 = 1, beta2 = 2, tau = 10.1, sigma1 = 1, sigma2 = 1)
+model <- nimbleModel(code, constants = constants, data = data, inits = inits)
+
+#Make sure it compiles and run MCMC
+cmodel = compileNimble(model)
+mcmc.out <- nimbleMCMC(code = code, constants = constants,
+                       data = data, inits = inits,
+                       nchains = 2, niter = 10000,
+                       summary = TRUE, WAIC = TRUE,
+                       monitors = c('beta1', "sigma1",'sigma2', "beta2", "tau"))
+mcmc.out$summary
+```
+
+## Continuous Model
+
+The following is the full continuous model that we fit. First I have the code for the simulated data. Some of the simulated data performed strangely so if this doesn't work then you can email me and I can see if there was something else we changed to it. 
+
+This model accounts for the following:
+
+1 possible change point (tau)
+Temporal Correlation phiu, phiv, and phiw are all parameters involving this
+
+We need 3 temporal correlation parameters to account for:
+Temporal correlation between times before the change point
+Temporal correlation between times after the change point
+Temporal correlation between time after the change point and those before the change point
+
+The data is simulated so your estimates should be close to what the true values are. If they aren't then something is most likely not working correctly. In this I have used many of nimbles defaults and there are definitely other things you could try in nimble if you find them to be faster or better.
+```{r}
+## Correlated Data
+library(MASS)
+library(nimble, warn.conflicts = FALSE)
+
+n <- 100 #number of times
+
+#Can loop through all of this if want to simulate values for multiple locations
+x <- runif(n)-0.5 #covariate (centered at 0)
+distmat <- as.matrix(dist(1:n)) #distance in time
+
+beta1 <- 2 #slope before change point
+beta2 <- 5 #slope after change point
+
+phiu <- 4 #temporal dependence "range" parameter 
+phi1 <- 2 #additional temporal dependence range before change point
+phi2 <- 10 #additional temporal dependence range after change point
+
+sigma2epsilon <- 1 #error variance
+#sigma2u, sigma21, sigma22 fixed at 1
+
+tau <- 45 #change point
+
+## Simulate random variables
+U <- mvrnorm(1, rep(0, n), exp(-distmat/phiu))
+V1 <- mvrnorm(1, rep(0, n), exp(-distmat/phi1))
+V2 <- mvrnorm(1, rep(0, n), exp(-distmat/phi2))
+
+#rather than using indicator function I just created two different vectors to add together to get mean of Y
+beforechange <- c((x*beta1 + V1)[1:tau], rep(0, length((tau+1):n)))
+afterchange <- c(rep(0, tau), (x*beta2 + V2)[(tau+1):n] )
+y <- U + beforechange + afterchange + rnorm(n, 0, sqrt(sigma2epsilon))
+
+
+#Look to see how it behaves
+plot(x, y)
+plot(1:n, y)
+par(mfrow=c(2,1))
+acf(y[1:tau])
+acf(y[(tau+1):n]) #it looks like the covariate has taken over here (is stronger signal than the temporal dependence?)
+
+
+# Nimble Code
+code <- nimbleCode({
+  beta1 ~ dnorm(0, sd = 200)
+  beta2 ~ dnorm(0, sd = 200) 
+  tau ~ dunif(0,100)
+  phiU ~ dunif(0,20)
+  phiW ~ dunif(0,20)
+  phiV ~ dunif(0,20)
+  cholU[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiU))
+  U[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholU[1:n,1:n], prec_param = 0)
+  mu[1:n] <- U[1:n] + beta1 * x1[1:n] * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+    beta2*x1[1:n] * ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+  chol_y[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiW)) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + chol(exp(-distmat[1:n,1:n]/phiV)) * ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+  y[1:n] ~ dmnorm(mu[1:n], cholesky = chol_y[1:n,1:n], prec_param = 0) 
+})
+
+
+# Setting Values
+mu_zero <- rep(0, n)
+distmat <- as.matrix(dist(1:n))
+x1 <- x
+
+# Create Model Object
+constants <- list(n = n, x1 = x1, mu_zero = mu_zero)
+data <- list(y = y, distmat = distmat)
+inits <- list(beta1 = 1, beta2 = 2, tau = 10.1, phiU = 1, phiW = 1, phiV = 1, U = mu_zero)
+model <- nimbleModel(code, constants = constants, data = data, inits = inits)
+
+# Compile Model, run MCMC
+cmodel = compileNimble(model)
+mcmc.out <- nimbleMCMC(code = code, constants = constants,
+                       data = data, inits = inits,
+                       nchains = 2, niter = 10000,
+                       summary = TRUE, WAIC = TRUE,
+                       monitors = c('beta1', "beta2", "tau", "phiU", "phiW", "phiV", "U"))
+# Model Summary
+mcmc.out$summary
+
+```
+
+The following is the same model, but now fit to the covid-19 data. This was before we got vaccine data, so no vaccine data is a part of this model.
+
+We fit the model to 3 counties around New York City (Queens, New York, and Bronx) and 3 in the rural areas (Albany, Wyoming, and Niagara)
+
+You may have to edit this code a bit in order to look at all 6 yourself. If you see my presentation slides you can see some of the results.
+```{r}
+setwd('~/Documents/Research/Soudeep/Abe/')
+library(MASS)
+library(nimble, warn.conflicts = FALSE)
+
+## Get 6 counties data ready to be modeled
+
+
+initial_data <- read.csv("US_COVID_weekly_NY_data.csv")
+covid_data <- initial_data[,c(5,11,23)]
+covid_data
+
+
+albany <- covid_data[covid_data$id=='ID1903',]
+queens <- covid_data[covid_data$id=='ID1944',]
+newyork <- covid_data[covid_data$id=='ID1933',]
+bronx <- covid_data[covid_data$id=='ID1905',]
+wyoming <- covid_data[covid_data$id=='ID1965',]
+niagara <- covid_data[covid_data$id=='ID1934',]
+
+covidlist <- list(albany, queens, newyork, bronx, wyoming, niagara)
+
+#Set X and y here
+
+for(kk in 1:6){
+	
+x1 <- covidlist[[kk]][,2]
+y <- covidlist[[kk]][,3]
+n = length(covidlist[[kk]][,3])
+
+
+#--------------------------------------------------------
+
+code <- nimbleCode({
+  beta1 ~ dnorm(0, sd = 200)
+  beta2 ~ dnorm(0, sd = 200) 
+  tau ~ dunif(0,100)
+  phiU ~ dgamma(2, 2)
+  phiW ~ dgamma(2,2)
+  phiV ~ dgamma(2,2)
+  sigma ~ dgamma(2,0.5)
+  cholU[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiU))
+  cholW[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiW))
+  cholV[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiV))
+  U[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholU[1:n,1:n], prec_param = 0)
+  W[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholW[1:n,1:n], prec_param = 0)
+  V[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholV[1:n,1:n], prec_param = 0)
+  for(i in 1:n){
+  	mu[i] <- U[i] + (beta1 * x1[i] + V[i]) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+    (beta2*x1[i] + W[i])* ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+  	y[i] ~ dnorm(mu[i], sd=sigma)
+  } 
+})
+
+
+
+
+# Setting Values
+mu_zero <- rep(0, n)
+distmat <- as.matrix(dist(1:n))
+
+# Create Model Object
+constants <- list(n = n, x1 = x1, mu_zero = mu_zero)
+data <- list(y = y, distmat = distmat)
+inits <- list(beta1 = 1, beta2 = 2, tau = 10.1, phiU = 1, phiW = 1, phiV = 1, U = mu_zero, W=mu_zero, V=mu_zero, sigma=0.1)
+model <- nimbleModel(code, constants = constants, data = data, inits = inits)
+
+# Compile Model, run MCMC
+cmodel = compileNimble(model)
+mcmc.out <- nimbleMCMC(code = code, constants = constants,
+                       data = data, inits = inits, nburnin=2000,
+                       nchains = 2, niter = 20000,thin=2,
+                       summary = TRUE, WAIC = TRUE,
+                       monitors = c('beta1', "beta2", "tau", "phiU", "phiW", "phiV", "sigma"))
+# Model Summary
+mcmc.out$summary
+
+save(mcmc.out, file=paste("NYcounty", kk, ".Rdata", sep=''))
+}
+```
+
+## Ordinal Model
+
+The following is where we have gotten to as of now with our ordinal model. We have had to try defining things in many different ways in order to get the change point estimates, but this one seems to be working. I have incorporated the change point, but not the temporal correlation. I also haven't fit this to the vaccine data. I would say the next steps are to:
+
+Add temporal dependence
+Get vaccine data together with case data
+Fit the model to the covid-19 case levels (1-4) and use vaccines as a coefficient
+
+Here is what it is at right now with the simulated data. You can also mess around with the simulated data to see how well it holds up.
+```{r}
+library(MASS)
+library(nimble, warn.conflicts = FALSE)
+
+n <- 100 #number of times
+
+#Can loop through all of this if you want to simulate values for multiple locations
+x <- runif(n)-0.5 #covariate (centered at 0)
+distmat <- as.matrix(dist(1:n)) #distance in time
+x <- sort(x)
+
+beta1 <- 2 #slope
+beta2 <- 8
+
+y <- mvrnorm(1, beta1*x[1:50], diag(50))
+y2 <- mvrnorm(1, beta2*x[51:100], diag(50))
+y <- c(y,y2)
+
+z <- seq(1,100,1)
+for(i in 1:100){
+  if(y[i]< -1){
+    z[i] <- 1
+  }
+  else if(y[i] < -0){
+    z[i] <- 2
+  }
+  else if(y[i] < 1.1) {
+    z[i] <- 3
+  }
+  else{
+    z[i] <- 4
+  }
+}
+
+#Look to see how it behaves
+plot(x, z)
+plot(x,y)
+#plot(1:n, z)
+#par(mfrow=c(2,1))
+
+#--------------------------------------------------------
+#Try just ordinal
+#Change gammas around
+#
+
+code <- nimbleCode({
+  beta1 ~ dnorm(0, sd = 200)
+  beta2 ~ dnorm(0, sd = 200) 
+  tau ~ dunif(0,100)
+  sigma <- 1
+  alpha3 ~ dnorm(0,1)
+  alpha4 ~ dnorm(0,1)
+  gam[1] <- -9999999
+  gam[2] <- 0
+  gam[3] <- exp(alpha3)
+  gam[4] <- exp(alpha4) + gam[3]
+  gam[5] <- 9999999
+  
+  for(i in 1:n){
+    mu[i] <- beta1 * x1[i] * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+      beta2 * x1[i] * ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+    z[i,] ~ dmulti(psi[i,1:4], size=1)
+    for(j in 1:4){
+      psi[i,j] <- iprobit((gam[j+1]-mu[i])/sigma) - iprobit((gam[j]-mu[i])/sigma)
+    }
+  } 
+})
+
+# Setting Values
+mu_zero <- rep(0, n)
+distmat <- as.matrix(dist(1:n))
+x1 <- x
+z2 <- matrix(0, nrow=n, ncol=4)
+for(i in 1:n){
+  z2[i,z[i]] <- 1
+}
+
+constants <- list(n = n, x1 = x1, mu_zero = mu_zero)
+data <- list(z = z2)
+gaminit <- c(-2, 0, exp(0), exp(1) + exp(0),  5)
+y1 <- runif(length(z), min=gaminit[z], max=gaminit[z+1])
+betainit <- c(solve(t(x1)%*%x1)%*%t(x1)%*%y1)
+inits <- list(beta1 = betainit, beta2 = betainit, tau = 50.1, sigma=2, alpha3 = 0, alpha4 = 1)
+model <- nimbleModel(code, constants = constants, data = data, inits = inits)
+
+# Compile Model, run MCMC
+cmodel = compileNimble(model)
+mcmc.out <- nimbleMCMC(code = code, constants = constants,
+                       data = data, inits = inits, nburnin=2000,
+                       nchains = 2, niter = 20000,thin=2,
+                       summary = TRUE,
+                       monitors = c('beta1', "beta2", "alpha3","alpha4", "tau"))
+# Model Summary
+mcmc.out$summary
+
+save(mcmc.out, file=paste("simulation", kk, ".Rdata", sep=''))
+```
+
+I am also including what I started on with the vaccine data and combining it with the case counts in case it is helpful. The csv for the county vaccine data is very large so this can be slow, but if you need to fixup the data more then you can refer to this. Apparently you should take the max instead of the sum, but I haven't looked very closely at that.
+```{r}
+library(tidyverse)
+library(lubridate)
+#Two separate datasets
+vaccinations <- read.csv("C:/Users/abedu/Downloads/COVID-19_Vaccinations_in_the_United_States_County.csv")
+initial_data <- read.csv("C:/Users/abedu/Downloads/US_COVID_weekly_NY_data.csv")
+
+table(initial_data[initial_data$county == "New York",]$category)
+
+ny_vaccines <- vaccinations[vaccinations$Recip_State=="NY",]
+ny_vaccines$county <- gsub( " .*$", "", ny_vaccines$Recip_County)
+initial_data$county <- gsub( ",.*$", "", initial_data$key)
+
+#Getting year and week to combine
+ny_vaccines$Date <- as.Date(ny_vaccines$Date, format = "%m/%d/%Y")
+initial_data$week <- as.Date(initial_data$week)
+initial_data$year <- year(initial_data$week)
+initial_data$date <- initial_data$week
+initial_data$week <- week(initial_data$date)
+
+#Convert vaccines to weekly
+ny_vaccines$week <- week(ny_vaccines$Date)
+ny_vaccines$year <- year(ny_vaccines$Date)
+ny_vaccines_weekly = ny_vaccines %>% group_by(week, year, county)  %>%
+  summarise(total_dose_one = sum(Administered_Dose1_Recip),
+            total_complete = sum(Series_Complete_Yes),
+            total_booster = sum(Booster_Doses))
+
+
+#Combine on week and on county
+together <- merge(ny_vaccines_weekly,initial_data,by=c("county","week", "year"))
+
+#Combining with data that is before vaccines
+before_vaccine <- initial_data[initial_data$date < "2020-12-20",]
+before_vaccine$total_dose_one = 0
+before_vaccine$total_complete = 0
+before_vaccine$total_booster = 0
+vaccine_county_df <- rbind(together, before_vaccine)
+
+plot(vaccine_county_df$date, vaccine_county_df$total_dose_one)
+plot(vaccine_county_df$date, vaccine_county_df$total_complete)
+```
+
+Feel free to email me whenever you might have questions abe.durrant@gmail.com.
