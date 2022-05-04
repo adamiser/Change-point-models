@@ -411,8 +411,6 @@ mcmc.out <- nimbleMCMC(code = code, constants = constants,
                        monitors = c('beta1', "beta2", "alpha3","alpha4", "tau"))
 # Model Summary
 mcmc.out$summary
-
-save(mcmc.out, file=paste("simulation", kk, ".Rdata", sep=''))
 ```
 
 I am also including what I started on with the vaccine data and combining it with the case counts in case it is helpful. The csv for the county vaccine data is very large so this can be slow, but if you need to fixup the data more then you can refer to this. Apparently you should take the max instead of the sum, but I haven't looked very closely at that.

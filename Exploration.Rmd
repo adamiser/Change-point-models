@@ -1,0 +1,217 @@
+---
+title: "Exploring"
+author: "Adam Simpson"
+date: "5/2/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(R2jags)
+library(MASS)
+library(nimble, warn.conflicts = FALSE)
+```
+
+
+```{r}
+#Two separate datasets
+vaccinations <- read.csv("COVID-19_Vaccinations_in_the_United_States_County.csv")
+initial_data <- read.csv("US_COVID_weekly_NY_data.csv")
+
+table(initial_data[initial_data$county == "New York",]$category)
+
+ny_vaccines <- vaccinations[vaccinations$Recip_State=="NY",]
+ny_vaccines$county <- gsub( " .*$", "", ny_vaccines$Recip_County)
+initial_data$county <- gsub( ",.*$", "", initial_data$key)
+
+#Getting year and week to combine
+ny_vaccines$Date <- as.Date(ny_vaccines$Date, format = "%m/%d/%Y")
+initial_data$week <- as.Date(initial_data$week)
+initial_data$year <- year(initial_data$week)
+initial_data$date <- initial_data$week
+initial_data$week <- week(initial_data$date)
+
+#Convert vaccines to weekly
+ny_vaccines$week <- week(ny_vaccines$Date)
+ny_vaccines$year <- year(ny_vaccines$Date)
+ny_vaccines_weekly = ny_vaccines %>% group_by(week, year, county)  %>%
+  summarise(total_dose_one = sum(Administered_Dose1_Recip),
+            total_complete = sum(Series_Complete_Yes),
+            total_booster = sum(Booster_Doses))
+
+
+#Combine on week and on county
+together <- merge(ny_vaccines_weekly,initial_data,by=c("county","week", "year"))
+
+#Combining with data that is before vaccines
+before_vaccine <- initial_data[initial_data$date < "2020-12-20",]
+before_vaccine$total_dose_one = 0
+before_vaccine$total_complete = 0
+before_vaccine$total_booster = 0
+vaccine_county_df <- rbind(together, before_vaccine)
+
+plot(vaccine_county_df$date, vaccine_county_df$total_dose_one)
+plot(vaccine_county_df$date, vaccine_county_df$total_complete)
+```
+
+
+Explore the data a bit more.
+
+```{r}
+queens <- vaccine_county_df[vaccine_county_df$county == "Queens", ]
+
+queens <- queens[order(queens$time), ]
+
+y <- queens$new_cases_per_100k
+t <- queens$time
+vac_comp <- queens$total_complete
+n = dim(queens)[1]
+
+mu_zero <- rep(0, n)
+distmat <- as.matrix(dist(1:n))
+
+
+mdl <- " model {
+
+  phiU ~ dgamma(2, 2)
+  phiW ~ dgamma(2,2)
+  phiV ~ dgamma(2,2)
+  cholU[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiU))
+  cholW[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiW))
+  cholV[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiV))
+  U[1:n] ~ dmnorm(mu_zero[1:n], cholU[1:n,1:n])
+  W[1:n] ~ dmnorm(mu_zero[1:n], cholW[1:n,1:n])
+  V[1:n] ~ dmnorm(mu_zero[1:n], cholV[1:n,1:n])
+  
+  for (i in 1:n) {
+    y[i] ~ dnorm(mu[i], 1/vr)
+    mu[i] <- U[i] + (beta1*t[i] + V[i]) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+    (beta2*t[i] + W[i]) * ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+  }
+  beta1 ~ dnorm(0, .01)
+  beta2 ~ dnorm(0, .01)
+  beta_vac1 ~ dnorm(0, .01)
+  beta_vac2 ~ dnorm(0, .01)
+  tau ~ dunif(0, 100)
+  vr ~ dgamma(2, .5)
+}"
+
+writeLines(mdl, 'vac_test.txt')
+data <- c('y', 't', 'n', 'mu_zero', 'distmat')
+parms <- c('beta1' ,'beta2', 'phiU', 'phiV', 'phiW', 'tau', 'vr')
+inits <- list(list(beta1 = 1, beta2 = 2, phiU = mu_zero, phiW = mu_zero, phiV = mu_zero, 
+              tau = 10.1, vr = .01),
+              list(beta1 = 1, beta2 = 2, phiU = mu_zero, phiW = mu_zero, phiV = mu_zero,
+              tau = 10.1, vr = .01),
+              list(beta1 = 1, beta2 = 2, phiU = mu_zero, phiW = mu_zero, phiV = mu_zero,
+              tau = 10.1, vr = .01))
+
+vac_test.sim <- jags(data = data, parameters.to.save = parms, model.file = 'vac_test.txt',
+                     n.iter = 10000, n.chains = 3, n.burnin = 1000, n.thin= 2, inits = inits)
+vac_test.sim
+```
+
+
+```{r}
+queens <- vaccine_county_df[vaccine_county_df$county == "Queens", ]
+
+queens <- queens[order(queens$time), ]
+
+y <- queens$new_cases_per_100k
+t <- queens$time
+vac_comp <- queens$total_complete
+n = dim(queens)[1]
+
+mu_zero <- rep(0, n)
+distmat <- as.matrix(dist(1:n))
+
+
+mdl <- " model {
+  for (i in 1:n) {
+    y[i] ~ dnorm(mu[i], 1/vr)
+    mu[i] <- ( (beta1*t[i]) + (beta_vac1*vac_comp[i]) ) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+    ( (beta2*t[i]) + (beta_vac2*vac_comp[i]) ) * ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+  }
+  beta1 ~ dnorm(0, .01)
+  beta2 ~ dnorm(0, .01)
+  beta_vac1 ~ dnorm(0, .01)
+  beta_vac2 ~ dnorm(0, .01)
+  tau ~ dunif(0, 100)
+  vr ~ dgamma(2, .5)
+}"
+
+writeLines(mdl, 'vac_test.txt')
+data <- c('y', 't', 'n', 'vac_comp')
+parms <- c('beta1' ,'beta2', 'beta_vac1', 'beta_vac2', 'tau', 'vr')
+inits <- list(list(beta1 = 1, beta2 = 2, beta_vac1 = 1, beta_vac2 = 2, 
+              tau = 10.1, vr = .01),
+              list(beta1 = 1, beta2 = 2, beta_vac1 = 1, beta_vac2 = 2, 
+              tau = 10.1, vr = .01),
+              list(beta1 = 1, beta2 = 2, beta_vac1 = 1, beta_vac2 = 2, 
+              tau = 10.1, vr = .01))
+
+vac_test.sim <- jags(data = data, parameters.to.save = parms, model.file = 'vac_test.txt',
+                     n.iter = 10000, n.chains = 3, n.burnin = 1000, n.thin= 2, inits = inits)
+vac_test.sim
+
+```
+
+
+```{r}
+queens <- vaccine_county_df[vaccine_county_df$county == "Queens", ]
+
+queens <- queens[order(queens$time), ]
+
+x1 <- queens$time
+y <- queens$new_cases_per_100k
+x2 <- queens$total_complete
+n = dim(queens)[1]
+
+mu_zero <- rep(0, n)
+distmat <- as.matrix(dist(1:n))
+
+#--------------------------------------------------------
+
+code <- nimbleCode({
+  beta1 ~ dnorm(0, sd = 200)
+  beta2 ~ dnorm(0, sd = 200) 
+  tau ~ dunif(0,100)
+  phiU ~ dgamma(2, 2)
+  phiW ~ dgamma(2,2)
+  phiV ~ dgamma(2,2)
+  sigma ~ dgamma(2,0.5)
+  cholU[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiU))
+  cholW[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiW))
+  cholV[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiV))
+  U[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholU[1:n,1:n], prec_param = 0)
+  W[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholW[1:n,1:n], prec_param = 0)
+  V[1:n] ~ dmnorm(mu_zero[1:n], cholesky = cholV[1:n,1:n], prec_param = 0)
+  
+  for(i in 1:n){
+  	mu[i] <- U[i] + ((beta1 * x1[i]) + (beta_vac1 * x2[i]) + V[i]) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+    ((beta2*x1[i]) + (beta_vac2 * x2[i]) + W[i]) * ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+  	y[i] ~ dnorm(mu[i], sd=sigma)
+  } 
+})
+
+# Create Model Object
+constants <- list(n = n, x1 = x1, mu_zero = mu_zero)
+data <- list(y = y, distmat = distmat)
+inits <- list(beta1 = 1, beta2 = 2, tau = 10.1, beta_vac1 = 1, beta_vac2 = 2,
+              phiU = 1, phiW = 1, phiV = 1, U = mu_zero, W=mu_zero, V=mu_zero, sigma=0.1)
+model <- nimbleModel(code, constants = constants, data = data, inits = inits)
+
+# Compile Model, run MCMC
+cmodel = compileNimble(model)
+mcmc.out <- nimbleMCMC(code = code, constants = constants,
+                       data = data, inits = inits, nburnin=2000,
+                       nchains = 2, niter = 20000,thin=2,
+                       summary = TRUE, WAIC = TRUE,
+                       monitors = c('beta1', "beta2","beta_vac1", "beta_vac2", 
+                                    "tau", "phiU", "phiW", "phiV", "sigma"))
+# Model Summary
+mcmc.out$summary
+```
+
+
