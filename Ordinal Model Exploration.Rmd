@@ -150,14 +150,14 @@ code <- nimbleCode({
   beta1 ~ dnorm(0, sd = 200)
   beta2 ~ dnorm(0, sd = 200) 
   tau ~ dunif(0,100)
-  sigma <- 1
+  sigma ~ dgamma(10, 0.1)
   alpha3 ~ dnorm(0,3)
   alpha4 ~ dnorm(0,3)
-  gam[1] <- -9999999
-  gam[2] <- 20
-  gam[3] <- exp(alpha3)
+  gam[1] <- 0
+  gam[2] <- gam[1] + 20
+  gam[3] <- exp(alpha3) + gam[2]
   gam[4] <- exp(alpha4) + gam[3]
-  gam[5] <- 9999999
+  gam[5] <- gam[4] + 10000
   
   for(i in 1:n){
     mu[i] <- beta1 * t[i] * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
@@ -190,17 +190,17 @@ for (i in 1:n) {
 mu_zero <- rep(0, n)
 distmat <- as.matrix(dist(1:n))
 t <- 1:n
-z <- sample(queens$category)
+z <- queens$category
 z2 <- matrix(0, nrow=n, ncol=4)
 for(i in 1:n){
   z2[i,z[i]] <- 1
 }
 
-constants <- list(n = n, t = t, mu_zero = mu_zero)
-data <- list(z = z2)
-gaminit <- c(-10000, 20, exp(5), exp(6),  50000)
+constants <- list(n = n,  mu_zero = mu_zero)
+data <- list(z = z2, t = t)
+gaminit <- c(0, 20, exp(5), exp(6),  50000)
 betainit <- c(solve(t(t)%*%t)%*%t(t)%*%y)
-inits <- list(beta1 = betainit, beta2 = betainit, tau = 50.1, sigma=2, alpha3 = 0, alpha4 = 1)
+inits <- list(beta1 = betainit, beta2 = betainit, tau = 10.1, sigma=2, alpha3 = 3, alpha4 = 4)
 model <- nimbleModel(code, constants = constants, data = data, inits = inits)
 
 # Compile Model, run MCMC
