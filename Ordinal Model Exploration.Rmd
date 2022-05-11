@@ -141,7 +141,7 @@ mcmc.out$WAIC
 ## Get 6 counties data ready to be modeled
 
 initial_data <- read.csv("US_COVID_weekly_NY_data.csv")
-covid_data <- initial_data[,c(5,11,23, 24)]
+covid_data <- initial_data[,c(5, 11, 22, 23, 24)]
 
 albany <- covid_data[covid_data$id=='ID1903',]
 queens <- covid_data[covid_data$id=='ID1944',]
@@ -159,7 +159,7 @@ covidlist <- list(albany, queens, newyork, bronx, wyoming, niagara)
 code <- nimbleCode({
   beta1 ~ dnorm(0, sd = 200)
   beta2 ~ dnorm(0, sd = 200) 
-  tau ~ dunif(5, 15)
+  tau ~ dunif(10, 90)
   sigma ~ dgamma(2, 0.5)
   
   phiU ~ dgamma(2, 2)
@@ -181,8 +181,11 @@ code <- nimbleCode({
   gam[5] <- 99999999
   
   for(i in 1:n){
-    mu[i] <- U[i] + (beta1 * t[i] + V[i]) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
-    (beta2*t[i] + W[i])* ((i-tau) + abs(i-tau)) / (2 * (i-tau))
+    mu[i] <- U[i] + 
+      (beta1death * deaths[i] + V[i]) * 
+      ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
+    (beta2death * deaths[i] + W[i]) * 
+      ((i-tau) + abs(i-tau)) / (2 * (i-tau))
     z[i,] ~ dmulti(psi[i,1:4], size=1)
     for(j in 1:4){
       psi[i,j] <- iprobit((gam[j+1]-mu[i]) / sigma) - iprobit((gam[j]-mu[i]) / sigma)
@@ -193,6 +196,7 @@ code <- nimbleCode({
 # Setting Values
 n <- dim(albany)[1]
 y <- albany$new_cases_per_100k
+deaths <- albany$prev_log_new_death
 mu_zero <- rep(0, n)
 distmat <- as.matrix(dist(1:n))
 t <- 1:n
@@ -202,14 +206,15 @@ new_n <- length(new_z)
 # new_y <- y[-c(15, 27:39, 66:80)]
 z2 <- matrix(0, nrow=n, ncol=4)
 for(i in 1:n){
-  z2[i,new_z[i]] <- 1
+  z2[i,z[i]] <- 1
 }
 new_t <- 1:new_n
 
-constants <- list(n = new_n,  mu_zero = mu_zero, distmat = distmat)
-data <- list(z = z2, t = t)
+constants <- list(n = n,  mu_zero = mu_zero, distmat = distmat)
+data <- list(z = z2, deaths = deaths)
 betainit <- c(solve(t(t)%*%t)%*%t(t)%*%y)
-inits <- list(beta1 = betainit, beta2 = betainit, tau = 10.1, sigma=1, alpha3 = 3, alpha4 = 4,
+inits <- list(beta1death = 2, beta2death = 2,
+              tau = 10.1, sigma=1, alpha3 = 3, alpha4 = 4,
               phiU = 1, phiW = 1, phiV = 1, U = mu_zero, W=mu_zero, V=mu_zero)
 model <- nimbleModel(code, constants = constants, data = data, inits = inits)
 
@@ -219,7 +224,7 @@ mcmc.out <- nimbleMCMC(code = code, constants = constants,
                        data = data, inits = inits, nburnin=2000,
                        nchains = 1, niter = 10000,thin=2,
                        summary = TRUE,
-                       monitors = c('beta1', "beta2", "alpha3","alpha4", "tau",
+                       monitors = c('beta1death', "beta2death", "alpha3","alpha4", "tau",
                                     "phiU", "phiV", "phiW"),
                        samplesAsCodaMCMC = TRUE,
                        WAIC = TRUE)
@@ -229,6 +234,7 @@ mcmc.out$summary
 
 ```
 
+Add previous log deaths as a covariate
 
 ```{r}
 ## Get 6 counties data ready to be modeled
