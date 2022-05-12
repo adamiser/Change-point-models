@@ -1,6 +1,30 @@
 library(MASS)
 library(nimble, warn.conflicts = FALSE)
 library(tidyverse)
+library(lubridate)
+library(coda)
+
+new_data <- read.csv("joineddata.csv")
+initial_data <- read.csv("US_COVID_weekly_NY_data.csv")
+new_data$county <- gsub( " .*$", "", new_data$Recip_County)
+
+simple_data <- new_data[c("Date", "time", "population", "Administered_Dose1_Pop_Pct",
+                          "prev_log_new_death", "new_cases_per_100k", "category", "county")]
+
+# Combining with data that is before vaccines
+initial_data$week <- as.Date(initial_data$week)
+initial_data$year <- year(initial_data$week)
+initial_data$date <- initial_data$week
+before_vaccine <- initial_data[initial_data$date < "2020-12-20",]
+before_vaccine$Administered_Dose1_Pop_Pct = 0
+before_vaccine$county <- gsub( ",.*$", "", before_vaccine$key)
+colnames(before_vaccine)[26] = "Date"
+before_vaccine <- before_vaccine[c("Date", "time", "population", "Administered_Dose1_Pop_Pct",
+                          "prev_log_new_death", "new_cases_per_100k", "category", "county")]
+
+vaccine_county_df <- rbind(simple_data, before_vaccine)
+
+albany <- vaccine_county_df[vaccine_county_df$county =='Albany',]
 
 code <- nimbleCode({
   beta1death ~ dnorm(0, sd = 200)
