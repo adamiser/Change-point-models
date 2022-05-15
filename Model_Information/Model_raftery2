@@ -1,0 +1,16 @@
+
+Quantile (q) = 0.025
+Accuracy (r) = +/- 0.005
+Probability (s) = 0.95 
+                                                 
+           Burn-in  Total Lower bound  Dependence
+           (M)      (N)   (Nmin)       factor (I)
+ beta1time 2        3831  3746         1.020     
+ beta2time 2        3947  3746         1.050     
+ betadeath 2        3844  3746         1.030     
+ betavac   3        4290  3746         1.150     
+ phiU      15       20545 3746         5.480     
+ phiV      21       33684 3746         8.990     
+ phiW      15       23000 3746         6.140     
+ tau       1        3742  3746         0.999     
+
