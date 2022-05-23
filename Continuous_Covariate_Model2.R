@@ -4,7 +4,7 @@ library(tidyverse)
 library(lubridate)
 library(coda)
 
-old_data <- read.csv("joineddata.csv")
+new_data <- read.csv("joineddata.csv")
 initial_data <- read.csv("US_COVID_weekly_NY_data.csv")
 new_data$county <- gsub( " .*$", "", new_data$Recip_County)
 
