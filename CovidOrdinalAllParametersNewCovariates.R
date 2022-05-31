@@ -196,7 +196,7 @@ for(jj in 1:n.counties){
 
 save(tausave, beta1deathsave, beta2deathsave, beta1vaxsave, beta2vaxsave,
      phiUsave, phiVsave, phiWsave, sigmasave, waic, gelman,
-     counties, file="CovidOrdinalAllParameters.Rdata")
+     counties, file="CovidOrdinalAllParametersNewCovariates.Rdata")
 
 
         

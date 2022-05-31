@@ -4,7 +4,7 @@ library(coda)
 library(parallel)
 
 
-dat <- read.csv("updatedjoineddata.csv")
+dat <- read.csv("/Users/adamiser810/Desktop/Change-point-models/updatedjoineddata.csv")
 
 counties <- unique(dat$Recip_County)
 n.counties <- length(counties)
@@ -25,7 +25,8 @@ gelman <- vector('list', length = n.counties)
 
 this_cluster <- makeCluster(4)
 
-jj <- 1
+for (jj in 1:2) {
+  
   thiscounty <- counties[jj]
   
   #Select just one county
@@ -109,7 +110,7 @@ run_MCMC_allcode <- function(seed, this) {
   #Compile Model, run MCMC
   cmodelOrd = compileNimble(modelOrd)
   myMCMC = buildMCMC(cmodelOrd)
-  ordMCMC = compileNimble(myMCMC, enableWAIC = TRUE)
+  ordMCMC = compileNimble(myMCMC)
   
   results <- runMCMC(ordMCMC, niter = 100000, nchains = 4,, nburnin = 5000, thin = 5,
                      summary = TRUE, samplesAsCodaMCMC = TRUE,
@@ -117,7 +118,8 @@ run_MCMC_allcode <- function(seed, this) {
   
   return(results)
   
-  }
+}
+}
   
   
   chain_output <- parLapply(cl = this_cluster,
