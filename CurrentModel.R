@@ -67,6 +67,11 @@ for(jj in 1:n.counties){
     cholV[1:n,1:n] <- chol(exp(-distmat[1:n,1:n]/phiV))
     W[1:n] ~ dmnorm(mu_zero[1:n], cholesky=cholW[1:n,1:n], prec_param=1)
     V[1:n] ~ dmnorm(mu_zero[1:n], cholesky=cholV[1:n,1:n], prec_param=1)
+    
+    beta1deathstar <- beta1death / sigma
+    beta2deathstar <- beta2death / sigma
+    beta1vaxstar <- beta1vax / sigma
+    beta2vaxstar <- beta2vax / sigma
   
     for(i in 1:n){
       mu[i] <- U[i] + (beta1death * x1[i] + beta1vax*x2[i] + V[i]) * ((tau-i) + abs(tau-i)) / (2 * (tau-i)) + 
@@ -105,21 +110,23 @@ for(jj in 1:n.counties){
                        nchains = 2, niter = 100000,thin=5,
                        summary = TRUE,
                        monitors = c('beta1death', "beta2death", "beta1vax", "beta2vax", 
-                                    "alpha3","alpha4", "tau", "phiU", "phiV", "phiW", "sigma"),
+                                    "alpha3","alpha4", "tau", "phiU", "phiV", "phiW", "sigma",
+                                    "beta1deathstar", "beta2deathstar",
+                                    "beta1vaxstar", "beta2vaxstar"),
                        samplesAsCodaMCMC = TRUE,
                        WAIC = TRUE)
   #Model Summary
   #mcmc.outOrd$summary
 
-  tausave[jj,1:3] <- mcmc.outOrd$summary$all.chains[11,c(1,4,5)]
-  beta1deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[3, c(1, 4, 5)]
-  beta2deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[5, c(1, 4, 5)]
-  beta1vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[4, c(1, 4, 5)]
-  beta2vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[6, c(1, 4, 5)]
-  phiUsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[7, c(1, 4, 5)]
-  phiVsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[8, c(1, 4, 5)]
-  phiWsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[9, c(1, 4, 5)]
-  sigmasave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[10, c(1, 4, 5)]
+  tausave[jj,1:3] <- mcmc.outOrd$summary$all.chains[15,c(1,4,5)]
+  beta1deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[4, c(1, 4, 5)]
+  beta2deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[8, c(1, 4, 5)]
+  beta1vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[6, c(1, 4, 5)]
+  beta2vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[10, c(1, 4, 5)]
+  phiUsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[11, c(1, 4, 5)]
+  phiVsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[12, c(1, 4, 5)]
+  phiWsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[13, c(1, 4, 5)]
+  sigmasave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[14, c(1, 4, 5)]
   
   waic[jj, 1] <- mcmc.outOrd$WAIC$WAIC
   gelman[[jj]][[1]] <- gelman.diag(mcmc.outOrd$samples)
@@ -196,7 +203,7 @@ for(jj in 1:n.counties){
 
 save(tausave, beta1deathsave, beta2deathsave, beta1vaxsave, beta2vaxsave,
      phiUsave, phiVsave, phiWsave, sigmasave, waic, gelman,
-     counties, file="CovidOrdinalAllParametersNewCovariates.Rdata")
+     counties, file="CurrentModel.Rdata")
 
 
         
