@@ -3,7 +3,7 @@ library(nimble)
 library(coda)
 
 #Load the data
-dat <- read.csv("updatedjoineddata.csv")
+dat <- read.csv("currentjoineddata.csv")
 
 counties <- unique(dat$Recip_County)
 n.counties <- length(counties)
@@ -28,7 +28,7 @@ for(jj in 1:n.counties){
   this <- dat %>%
     subset(Recip_County==thiscounty) %>%
     select(Date, category, prev_log_new_death, Administered_Dose1_Pop_Pct.x, log_new_death, 
-           new_vax_this_week, new_cases_per_100k.y)
+           new_vax_this_week, new_cases_per_100k)
 
   ###############
   # Create data for Nimble Model
@@ -38,7 +38,7 @@ for(jj in 1:n.counties){
   x2 <- rev(this$Administered_Dose1_Pop_Pct.x)
   x2[1] <- 0 #no new vaccinations before the first date
   n <- length(z)
-  y <- rev(this$new_cases_per_100k.y)
+  y <- rev(this$new_cases_per_100k)
 
   ###############
   #Nimble Ordinal Model
