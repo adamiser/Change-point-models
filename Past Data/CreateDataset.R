@@ -1,13 +1,12 @@
 library(tidyverse)
 
-dat <- read.csv("currentdata.csv")
+dat <- read.csv("Covid_to_May_2022.csv")
 
 counties <- unique(dat$county)
 n.counties <- length(counties)
 
 dat <- dat[order(dat$week), ]
 dat <- dat[order(dat$county), ]
-
 
 dat$Recip_County <- paste(dat$county, "County")
 dat$Date <- dat$week
