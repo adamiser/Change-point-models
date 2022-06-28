@@ -105,10 +105,33 @@ plot(df$ChangePoint_Ord, log(df$Population),
 library(ggplot2)
 library(usmap)
 
+### To consider the question: where are change points across the state?  
+### How are the estimated change points different for the ordinal response model and the continuous response model?
+
 # Map of change points
 plot_usmap(data=df, values="ChangePoint_Ord", include="New York") + scale_fill_continuous(name="Change Point") + 
   theme(legend.position='right') + 
   ggtitle("Mean Change Points Mapped Across NY")
+
+#map of the range of the 95% CI bounds
+
+#Maps of change points and 95% CI bounds for continuous response model
+
+
+
+### To consider the question: How are beta's behaving before and after change point?
+
+# 2 maps: posterior mean of the beta's for death before the change and beta's for death after change
+
+# 2 maps: beta's for vaccination instead of death
+
+# conisder the ranges of credible intervals
+
+# Map the ranges for the beta's for the continuous response model (I expect the range to be a lot smaller)
+
+
+
+
 
 # Map of population
 df$logpop <- log(population)
@@ -119,6 +142,11 @@ plot_usmap(data=df, values="logpop", include="New York") + scale_fill_continuous
 
 
 
+
+
+
+
+### IGNORE FOR NOW
 # Plots of weekly ordinal data with change points marked? 
 ii <- 1 #for(ii in 1:n.counties){
 thiscounty <- subset(dat, Recip_County==counties[ii])
