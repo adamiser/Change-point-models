@@ -81,7 +81,25 @@ fipscodes[45:50,] <- fipscodes[c(46:50,45),]
 
 df <- data.frame("County"=counties, "Population"=populations, 
                  "ChangePoint_Ord"=tausave[,1], 
-                 "ChangePoint_Cont"=tausave[,4], 
+                 "ChangePoint_Cont"=tausave[,4],
+                 "ChangePointRange_Ord"=tausave[,3]-tausave[,2],
+                 "ChangePointRange_Cont"=tausave[,6]-tausave[,5],
+                 "Beta1death_Ord"=beta1deathsave[,1],
+                 "Beta2death_Ord"=beta2deathsave[,1],
+                 "Beta1vax_Ord"=beta1vaxsave[,1],
+                 "Beta2vax_Ord"=beta2vaxsave[,1],
+                 "Beta1death_Cont"=beta1deathsave[,4],
+                 "Beta2death_Cont"=beta2deathsave[,4],
+                 "Beta1vax_Cont"=beta1vaxsave[,4],
+                 "Beta2vax_Cont"=beta2vaxsave[,4],
+                 "Beta1deathRange_Ord"=beta1deathsave[,3]-beta1deathsave[,2],
+                 "Beta1deathRange_Cont"=beta1deathsave[,6]-beta1deathsave[,5],
+                 "Beta1vaxRange_Ord"=beta1vaxsave[,3]-beta1vaxsave[,5],
+                 "Beta1vaxRange_Cont"=beta1vaxsave[,6]-beta1vaxsave[,5],
+                 "Beta2deathRange_Ord"=beta2deathsave[,3]-beta2deathsave[,2],
+                 "Beta2deathRange_Cont"=beta2deathsave[,6]-beta2deathsave[,5],
+                 "Beta2vaxRange_Ord"=beta2vaxsave[,3]-beta2vaxsave[,5],
+                 "Beta2vaxRange_Cont"=beta2vaxsave[,6]-beta2vaxsave[,5],
                  "fips"=fipscodes$fips)
 
 
@@ -96,14 +114,12 @@ plot(df$ChangePoint_Ord, log(df$Population),
 
 
 
-# Difference in change points (ordinal vs continuous)
-
-
-
 # Change points on Google map of New York
 
 library(ggplot2)
 library(usmap)
+library(gridExtra)
+
 
 ### To consider the question: where are change points across the state?  
 ### How are the estimated change points different for the ordinal response model and the continuous response model?
@@ -113,19 +129,94 @@ plot_usmap(data=df, values="ChangePoint_Ord", include="New York") + scale_fill_c
   theme(legend.position='right') + 
   ggtitle("Mean Change Points Mapped Across NY")
 
+
+
+
 #map of the range of the 95% CI bounds
+range_ord_nyplot <- plot_usmap(data=df, values="ChangePointRange_Ord", include="New York") + scale_fill_continuous(name="Change Point") + 
+  theme(legend.position='right') + 
+  ggtitle("95% CI Range of Change Point - Ordinal Response")
 
 #Maps of change points and 95% CI bounds for continuous response model
+range_cont_nyplot <- plot_usmap(data=df, values="ChangePointRange_Cont", include="New York") + scale_fill_continuous(name="Change Point") + 
+  theme(legend.position='right') + 
+  ggtitle("95% CI Range of Change Point - Continuous Response")
+
+grid.arrange(range_ord_nyplot, range_cont_nyplot, ncol = 2)
+
+### OBSERVATIONS ###
+# It seems that the ordinal response actually predicted the change point with less 
+# variability than the continuous model. This may just show that the ordinal model is 
+# better than the continuous model? 
+
+
 
 
 
 ### To consider the question: How are beta's behaving before and after change point?
 
 # 2 maps: posterior mean of the beta's for death before the change and beta's for death after change
+beta1death_ord_nyplot <- plot_usmap(data=df, values="Beta1death_Ord", include="New York") + 
+  scale_fill_continuous(name="Change Point",
+                        limits = c(0, 100)) + 
+  theme(legend.position='right') + 
+  ggtitle("Beta1death - Ordinal Response")
+
+beta2death_ord_nyplot <- plot_usmap(data=df, values="Beta2death_Ord", include="New York") + 
+  scale_fill_continuous(name="Change Point",
+                        limits = c(0, 100)) + 
+  theme(legend.position='right') + 
+  ggtitle("Beta2death - Ordinal Response")
+
+grid.arrange(beta1death_ord_nyplot, beta2death_ord_nyplot, ncol = 2)
+
+### OBSERVATIONS ###
+# The range of coefficient values across the counties is quite large. Most coefficients are small,
+# but others are huge. This makes the plot of NY look rather boring.
+# I've adjusted the limits to try and make it more interesting (I don't know that it's
+# the best approach). It seems that the coefficients tend to be larger after the change point.
+
+
 
 # 2 maps: beta's for vaccination instead of death
+beta1vax_ord_nyplot <- plot_usmap(data=df, values="Beta1vax_Ord", include="New York") + 
+  scale_fill_continuous(name="Change Point",
+                        limits = c(0, 100)) + 
+  theme(legend.position='right') + 
+  ggtitle("Beta1vax - Ordinal Response")
+
+beta2vax_ord_nyplot <- plot_usmap(data=df, values="Beta2vax_Ord", include="New York") + 
+  scale_fill_continuous(name="Change Point",
+                        limits = c(0, 1000)) + 
+  theme(legend.position='right') + 
+  ggtitle("Beta2vax - Ordinal Response")
+
+grid.arrange(beta1vax_ord_nyplot, beta2vax_ord_nyplot, ncol = 2)
+
+### OBSERVATIONS ###
+# These look better than the death coefficient. It's clear that the coefficient dramatically 
+# increases after the change point - this makes sense because vaccinations likely cause
+# the change point, or at least the change point occurs around when vaccinations
+# began to reach the public.
+
 
 # conisder the ranges of credible intervals
+remove_outlier <- df[-c(2,33,48,52,60),]
+beta1deathRange_ord_nyplot <- plot_usmap(data=remove_outlier, values="Beta1deathRange_Ord", include="New York") + scale_fill_continuous(name="Beta1death") + 
+  theme(legend.position='right') + 
+  ggtitle("95% CI Range of Beta1death - Ordinal Response")
+beta2deathRange_ord_nyplot <- plot_usmap(data=remove_outlier, values="Beta2deathRange_Ord", include="New York") + scale_fill_continuous(name="Beta2death") + 
+  theme(legend.position='right') + 
+  ggtitle("95% CI Range of Beta2death - Ordinal Response")
+
+grid.arrange(beta1death_nyplot, beta2death_nyplot, ncol = 2)
+
+### OBSERVATIONS ###
+# I removed a few outliers that seemed to be disrupting the plots.
+
+
+
+
 
 # Map the ranges for the beta's for the continuous response model (I expect the range to be a lot smaller)
 
@@ -134,7 +225,7 @@ plot_usmap(data=df, values="ChangePoint_Ord", include="New York") + scale_fill_c
 
 
 # Map of population
-df$logpop <- log(population)
+df$logpop <- log(populations)
 plot_usmap(data=df, values="logpop", include="New York") + scale_fill_continuous(name="log pop") + 
   theme(legend.position='right') + 
   ggtitle("Log Population Mapped Across NY")
@@ -156,4 +247,29 @@ abline(v=tausave[ii,2:3], lty=2, col='darkgray') #I didn't look to see what thes
 #}
 
 
+
+
+
+
+
+
+
+
+### TEST ###
+
+
+# 2 maps: posterior mean of the beta's for death before the change and beta's for death after change
+df$logbeta1death_ord <- (df$Beta1death_Ord)^2
+df$logbeta2death_ord <- log(df$Beta2death_Ord)^2
+beta1death_ord_nyplot <- plot_usmap(data=df, values="logbeta1death_Ord", include="New York") + 
+  scale_fill_continuous(name="Change Point") + 
+  theme(legend.position='right') + 
+  ggtitle("Beta1death - Ordinal Response")
+
+beta2death_ord_nyplot <- plot_usmap(data=df, values="logbeta2death_Ord", include="New York") + 
+  scale_fill_continuous(name="Change Point") + 
+  theme(legend.position='right') + 
+  ggtitle("Beta2death - Ordinal Response")
+
+grid.arrange(beta1death_ord_nyplot, beta2death_ord_nyplot, ncol = 2)
 
