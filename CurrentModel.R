@@ -17,11 +17,14 @@ phiUsave <- matrix(0, ncol=6, nrow = n.counties)
 phiVsave <- matrix(0, ncol=6, nrow = n.counties)
 phiWsave <- matrix(0, ncol=6, nrow = n.counties)
 sigmasave <- matrix(0, ncol=6, nrow=n.counties)
+gamma3save <- matrix(0, ncol=3, nrow=n.counties)
+gamma4save <- matrix(0, ncol=3, nrow=n.counties)
 
 waic <- matrix(0, ncol = 2, nrow = n.counties)
 gelman <- vector('list', length = n.counties)
+raftery <- vector('list', length = n.counties)
 
-for(jj in 1:n.counties){
+for (jj in 1:n.counties) {
   thiscounty <- counties[jj]
   
   #Select just one county
@@ -112,24 +115,28 @@ for(jj in 1:n.counties){
                        monitors = c('beta1death', "beta2death", "beta1vax", "beta2vax", 
                                     "alpha3","alpha4", "tau", "phiU", "phiV", "phiW", "sigma",
                                     "beta1deathstar", "beta2deathstar",
-                                    "beta1vaxstar", "beta2vaxstar"),
+                                    "beta1vaxstar", "beta2vaxstar",
+                                    "gam"),
                        samplesAsCodaMCMC = TRUE,
                        WAIC = TRUE)
   #Model Summary
   #mcmc.outOrd$summary
 
-  tausave[jj,1:3] <- mcmc.outOrd$summary$all.chains[15,c(1,4,5)]
+  tausave[jj,1:3] <- mcmc.outOrd$summary$all.chains[20,c(1,4,5)]
   beta1deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[4, c(1, 4, 5)]
   beta2deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[8, c(1, 4, 5)]
   beta1vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[6, c(1, 4, 5)]
   beta2vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[10, c(1, 4, 5)]
-  phiUsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[11, c(1, 4, 5)]
-  phiVsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[12, c(1, 4, 5)]
-  phiWsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[13, c(1, 4, 5)]
-  sigmasave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[14, c(1, 4, 5)]
+  phiUsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[16, c(1, 4, 5)]
+  phiVsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[17, c(1, 4, 5)]
+  phiWsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[18, c(1, 4, 5)]
+  sigmasave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[19, c(1, 4, 5)]
+  gam3save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[13, c(1, 2, 3)]
+  gam4save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[14, c(1, 2, 3)]
   
   waic[jj, 1] <- mcmc.outOrd$WAIC$WAIC
-  gelman[[jj]][[1]] <- gelman.diag(mcmc.outOrd$samples)
+  # gelman[[jj]][[1]] <- gelman.diag(mcmc.outOrd$samples)
+  raftery[[jj]][[1]] <- raftery.diag(mcmc.outOrd$samples)
 
   ###############################
   # Compare the change point when we estimate with continuous response
@@ -197,13 +204,16 @@ for(jj in 1:n.counties){
   
   waic[jj, 2] <- mcmc.outCont$WAIC$WAIC
   gelman[[jj]][[2]] <- gelman.diag(mcmc.outCont$samples)
+  raftery[[jj]][[2]] <- raftery.diag(mcmc.outCont$samples)
   
   print(paste("Finished:", jj))
 }
 
+
 save(tausave, beta1deathsave, beta2deathsave, beta1vaxsave, beta2vaxsave,
-     phiUsave, phiVsave, phiWsave, sigmasave, waic, gelman,
+     phiUsave, phiVsave, phiWsave, sigmasave, gam3save, gam4save, waic, gelman, raftery,
      counties, file="CurrentModel.Rdata")
+
 
 
         
