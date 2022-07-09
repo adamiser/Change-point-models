@@ -131,8 +131,8 @@ for (jj in 1:n.counties) {
   phiVsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[17, c(1, 4, 5)]
   phiWsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[18, c(1, 4, 5)]
   sigmasave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[19, c(1, 4, 5)]
-  gam3save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[13, c(1, 2, 3)]
-  gam4save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[14, c(1, 2, 3)]
+  gamma3save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[13, c(1, 2, 3)]
+  gamma4save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[14, c(1, 2, 3)]
   
   waic[jj, 1] <- mcmc.outOrd$WAIC$WAIC
   # gelman[[jj]][[1]] <- gelman.diag(mcmc.outOrd$samples)
@@ -211,8 +211,8 @@ for (jj in 1:n.counties) {
 
 
 save(tausave, beta1deathsave, beta2deathsave, beta1vaxsave, beta2vaxsave,
-     phiUsave, phiVsave, phiWsave, sigmasave, gam3save, gam4save, waic, gelman, raftery,
-     counties, file="CurrentModel.Rdata")
+     phiUsave, phiVsave, phiWsave, sigmasave, gamma3save, gamma4save, 
+     waic, gelman, raftery, counties, file="CurrentModel.Rdata")
 
 
 
