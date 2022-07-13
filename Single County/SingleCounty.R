@@ -6,25 +6,11 @@ library(coda)
 dat <- read.csv("currentjoineddata.csv")
 
 counties <- unique(dat$Recip_County)
-n.counties <- 1
+n.counties <- length(counties)
 
-tausave <- matrix(0, ncol=6, nrow=n.counties)
-beta1deathsave <- matrix(0, ncol=6, nrow = n.counties)
-beta2deathsave <- matrix(0, ncol=6, nrow = n.counties)
-beta1vaxsave <- matrix(0, ncol=6, nrow = n.counties)
-beta2vaxsave <- matrix(0, ncol=6, nrow = n.counties)
-phiUsave <- matrix(0, ncol=6, nrow = n.counties)
-phiVsave <- matrix(0, ncol=6, nrow = n.counties)
-phiWsave <- matrix(0, ncol=6, nrow = n.counties)
-sigmasave <- matrix(0, ncol=6, nrow=n.counties)
-gamma3save <- matrix(0, ncol=3, nrow=n.counties)
-gamma4save <- matrix(0, ncol=3, nrow=n.counties)
 
-waic <- matrix(0, ncol = 2, nrow = n.counties)
-gelman <- vector('list', length = n.counties)
-raftery <- vector('list', length = n.counties)
 
-jj <- 23
+for (jj in c(4, 15, 6, 38, 22, 16, 27, 51, 60, 53)) {
   thiscounty <- counties[jj]
   
   #Select just one county
@@ -122,22 +108,6 @@ jj <- 23
   #Model Summary
   #mcmc.outOrd$summary
 
-  tausave[jj,1:3] <- mcmc.outOrd$summary$all.chains[20,c(1,4,5)]
-  beta1deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[4, c(1, 4, 5)]
-  beta2deathsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[8, c(1, 4, 5)]
-  beta1vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[6, c(1, 4, 5)]
-  beta2vaxsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[10, c(1, 4, 5)]
-  phiUsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[16, c(1, 4, 5)]
-  phiVsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[17, c(1, 4, 5)]
-  phiWsave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[18, c(1, 4, 5)]
-  sigmasave[jj, 1:3] <- mcmc.outOrd$summary$all.chains[19, c(1, 4, 5)]
-  gamma3save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[13, c(1, 2, 3)]
-  gamma4save[jj, 1:3] <- mcmc.outOrd$summary$all.chains[14, c(1, 2, 3)]
-  
-  waic[jj, 1] <- mcmc.outOrd$WAIC$WAIC
-  # gelman[[jj]][[1]] <- gelman.diag(mcmc.outOrd$samples)
-  raftery[[jj]][[1]] <- raftery.diag(mcmc.outOrd$samples)
-
   ###############################
   # Compare the change point when we estimate with continuous response
 
@@ -192,54 +162,41 @@ jj <- 23
   # Model Summary
   #mcmc.outCont$summary
   
-  tausave[jj,4:6] <- mcmc.outCont$summary$all.chains[9,c(1,4,5)]
-  beta1deathsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[1, c(1, 4, 5)]
-  beta2deathsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[3, c(1, 4, 5)]
-  beta1vaxsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[2, c(1, 4, 5)]
-  beta2vaxsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[4, c(1, 4, 5)]
-  phiUsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[5, c(1, 4, 5)]
-  phiVsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[6, c(1, 4, 5)]
-  phiWsave[jj, 4:6] <- mcmc.outCont$summary$all.chains[7, c(1, 4, 5)]
-  sigmasave[jj, 4:6] <- mcmc.outCont$summary$all.chains[8, c(1, 4, 5)]
-  
-  waic[jj, 2] <- mcmc.outCont$WAIC$WAIC
-  gelman[[jj]][[2]] <- gelman.diag(mcmc.outCont$samples)
-  raftery[[jj]][[2]] <- raftery.diag(mcmc.outCont$samples)
   
   print(paste("Finished:", jj))
-
   
-county <- gsub(" ", "", counties[jj])
-file <- paste(county, ".Rdata", sep = "")
-
-save(tausave, beta1deathsave, beta2deathsave, beta1vaxsave, beta2vaxsave,
-     phiUsave, phiVsave, phiWsave, sigmasave, gamma3save, gamma4save, 
-     waic, gelman, raftery, counties, mcmc.outCont, mcmc.outOrd,
+  
+  county <- gsub(" ", "", counties[jj])
+  file <- paste(county, ".Rdata", sep = "")
+  
+  save(mcmc.outCont, mcmc.outOrd,
      file=file)
+  
+  title <- paste(county, "TracePlots", sep = "")
 
-
-title <- paste(counties[jj], "Change Point Trace plots")
-
-png(file = title)
-par(mfrow = c(2, 2))
-tauCont1 <- mcmc.outCont$samples$chain1[, 9]
-plot(as.matrix(tauCont1), type = 'l',
+  png(file = title)
+  par(mfrow = c(2, 2))
+  tauCont1 <- mcmc.outCont$samples$chain1[, 9]
+  plot(as.matrix(tauCont1), type = 'l',
      main = "Tau, Continuous, Chain 1",
      ylab = "Tau")
-tauCont2 <- mcmc.outCont$samples$chain2[,9]
-plot(as.matrix(tauCont2), type = 'l',
+  tauCont2 <- mcmc.outCont$samples$chain2[,9]
+  plot(as.matrix(tauCont2), type = 'l',
      main = "Tau, Continuous, Chain 2",
      ylab = "Tau")
 
 
-tauOrd1 <- mcmc.outOrd$samples$chain1[, 20]
-plot(as.matrix(tauOrd1), type = 'l',
+  tauOrd1 <- mcmc.outOrd$samples$chain1[, 20]
+  plot(as.matrix(tauOrd1), type = 'l',
      main = "Tau, Ordinal, Chain 1",
      ylab = "Tau")
-tauOrd2 <- mcmc.outOrd$samples$chain2[, 20]
-plot(as.matrix(tauOrd2), type = 'l',
+  tauOrd2 <- mcmc.outOrd$samples$chain2[, 20]
+  plot(as.matrix(tauOrd2), type = 'l',
      main = "Tau, Ordinal, Chain 2",
      ylab = "Tau")
-dev.off()
+  dev.off()
+  
+}
+
 
 
