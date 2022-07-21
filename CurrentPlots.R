@@ -1,6 +1,9 @@
 # Change Point Exploration
 
 library(tidyverse)
+library(ggplot2)
+library(usmap)
+library(gridExtra)
 
 dat <- read.csv("currentjoineddata.csv")
 counties <- unique(dat$Recip_County)
@@ -100,7 +103,38 @@ df <- data.frame("County"=counties, "Population"=populations,
                  "Beta2deathRange_Cont"=beta2deathsave[,6]-beta2deathsave[,5],
                  "Beta2vaxRange_Ord"=beta2vaxsave[,3]-beta2vaxsave[,5],
                  "Beta2vaxRange_Cont"=beta2vaxsave[,6]-beta2vaxsave[,5],
+                 "Gamma3_Ord" = gamma3save[,1],
+                 "Gamma4_Ord" = gamma4save[,1],
                  "fips"=fipscodes$fips)
+
+df[c(1,4,8,14,15,22,24,26:28,30,
+     32:38,40:42,45:47,52,54:60),
+   "Urban_Rural"] <- "Urban"
+df[c(2:3,5:7,9:13,16:21,23,25,29,
+     31,39,43:44,48:51,53,61:62),
+   "Urban_Rural"] <- "Rural"
+
+
+### Urban vs Rural analysis
+
+urban_df <- df[df$Urban_Rural == "Urban",]
+rural_df <- df[df$Urban_Rural == "Rural",]
+
+mean(df[df$Urban_Rural == "Urban",]$ChangePoint_Ord)
+mean(df[df$Urban_Rural == "Rural",]$ChangePoint_Ord)
+
+mean(df[df$Urban_Rural == "Urban",]$ChangePointRange_Ord)
+mean(df[df$Urban_Rural == "Rural",]$ChangePointRange_Ord)
+
+par(mfrow = c(1, 2))
+plot(urban_df$ChangePoint_Ord, log(urban_df$Population),
+     ylab = "log Population",
+     xlab = "Change Point (Ordinal)",
+     main = "Urban: Population vs Change Point ")
+plot(rural_df$ChangePoint_Ord, log(rural_df$Population),
+     ylab = "log Population",
+     xlab = "Change Point (Ordinal)",
+     main = "Rural: Population vs Change Point ")
 
 
 
@@ -116,13 +150,18 @@ plot(df$ChangePoint_Ord, log(df$Population),
 
 # Change points on Google map of New York
 
-library(ggplot2)
-library(usmap)
-library(gridExtra)
-
-
 ### To consider the question: where are change points across the state?  
 ### How are the estimated change points different for the ordinal response model and the continuous response model?
+
+
+
+# Map of population
+df$logpop <- log(populations)
+plot_usmap(data=df, values="logpop", include="New York") + scale_fill_continuous(name="log pop") + 
+  theme(legend.position='right') + 
+  ggtitle("Log Population Mapped Across NY")
+
+
 
 # Map of change points
 plot_usmap(data=df, values="ChangePoint_Ord", include="New York") + scale_fill_continuous(name="Change Point") + 
@@ -223,13 +262,16 @@ grid.arrange(beta1death_nyplot, beta2death_nyplot, ncol = 2)
 
 
 
+# Map of Gammas
+gamma3_nyplot <- plot_usmap(data = df, values = "Gamma3_Ord", include = "New York") + scale_fill_continuous(name = "Gamma3_Ord") + 
+  theme(legend.position = 'right') +
+  ggtitle("Gamma 3")
 
-# Map of population
-df$logpop <- log(populations)
-plot_usmap(data=df, values="logpop", include="New York") + scale_fill_continuous(name="log pop") + 
-  theme(legend.position='right') + 
-  ggtitle("Log Population Mapped Across NY")
+gamma4_nyplot <- plot_usmap(data = df, values = "Gamma4_Ord", include = "New York") + scale_fill_continuous(name = "Gamma4_Ord") + 
+  theme(legend.position = 'right') +
+  ggtitle("Gamma 4")
 
+grid.arrange(gamma3_nyplot, gamma4_nyplot, ncol = 2)
 
 
 
