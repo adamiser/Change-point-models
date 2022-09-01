@@ -40,9 +40,11 @@ df <- read.csv("currentjoineddata.csv")
 
 df$week = as.Date(df$week)
 
+county = "AlleganyCounty"
+
 df = df %>% 
   arrange( week, country, state, key, lat, long, county,population) %>% 
-  filter(Recip_County == "Albany County")
+  filter(Recip_County == "Allegany County")
   
 
 # df = df %>% mutate(first_dose_prevalence = total_dose_one/population,
@@ -1596,14 +1598,14 @@ while(i > 0){
                                         c(beta_mat_preconvergence_training[,3],
                                           beta_star_mat_preconvergence_training[,3]))
     
-    print("Gelman-Rubin:")
-    print(gelmanrubinstat)
+    
+    print(i)
     print(converged)
     
     
     if( i %% 50 == 0){
       
-      ;rubinstat = vector()
+      gelmanrubinstat = vector()
       tot_gel_var = nrow(mcmc_obj_list_training[[i]])
       
       # check for gelman rubin stat
@@ -1613,6 +1615,9 @@ while(i > 0){
                              as.data.frame), coda::mcmc)
         gelmanrubin = gelman.diag(x = plist)
         gelmanrubinstat = c(gelmanrubinstat, gelmanrubin$psrf[,1])
+        
+        
+        print(gelmanrubinstat)
         
         
       }
@@ -2450,20 +2455,17 @@ while(i > 0){
       
     }
     
-    if(length(phi_v_sp_sample_training) == sample_size_training){
-      save.image(paste0("main_cp_sptmp_UV_model_gelman_delta_slice_vectorized_discrete_phi_vaccine_data_10-90_cont_tp_closeTo60_incl_0_T_fewer_covar_1st_vaccine_updated",i,"iter_completed.RData"))
-      break
-    }
+    
     
   }
-  
-  if(i%% 1000 == 0){
-    save.image(paste0(
-      "main_cp_sptmp_UV_model_gelman_delta_slice_vectorized_discrete_phi_vaccine_data_10-90_cont_tp_closeTo60_incl_0_T_fewer_covar_1st_vaccine_updated",i,"iter.RData"))
+  if (i %% 500 == 0) {
+    save(beta_sample_chains_list_training, beta_star_sample_chains_list_training,
+     t0_sample_chains_list_training, file=paste(county, i, "iters.Rdata", sep = ""))
   }
+  
   i = i+1
   
-  if (i > 100000) {
+  if (i > 5000) {
     break
   }
   
