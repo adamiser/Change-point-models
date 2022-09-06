@@ -40,11 +40,11 @@ df <- read.csv("currentjoineddata.csv")
 
 df$week = as.Date(df$week)
 
-county = "AlbanyCounty"
+county = "JeffersonCounty"
 
 df = df %>% 
   arrange( week, country, state, key, lat, long, county,population) %>% 
-  filter(Recip_County == "Albany County")
+  filter(Recip_County == "Jefferson County")
   
 
 # df = df %>% mutate(first_dose_prevalence = total_dose_one/population,
@@ -2458,7 +2458,7 @@ while(i > 0){
     
     
   }
-  if (i %% 500 == 0) {
+  if (i %% 2000 == 0) {
     save(beta_sample_chains_list_training, beta_star_sample_chains_list_training,
      t0_sample_chains_list_training, file=paste(county, i, "iters.Rdata", sep = ""))
   }
@@ -2540,6 +2540,23 @@ if(min_idx %% length(rho_vec_sp_training) == 0){
   phi_t = rho_vec_tmp_training[floor(min_idx/length(rho_vec_sp_training)) + 1]
 }
 return(c(phi_s, phi_t))
+
+n <- length(beta_sample_chains_list_training[[1]])
+
+par(mfrow = c(2, 3))
+plot(beta_sample_chains_list_training[[1]][1:n],
+     ylab = 'Beta Pre-Change Point - Chain 1')
+plot(beta_sample_chains_list_training[[2]][1:n],
+     ylab = 'Beta Pre-Change Point - Chain 2')
+plot(beta_sample_chains_list_training[[3]][1:n],
+     ylab = 'Beta Pre-Change Point - Chain 3')
+plot(beta_star_sample_chains_list_training[[1]][1:n],
+     ylab = 'Beta Post-Change Point - Chain 1')
+plot(beta_star_sample_chains_list_training[[2]][1:n],
+     ylab = 'Beta Post-Change Point - Chain 2')
+plot(beta_star_sample_chains_list_training[[3]][1:n],
+     ylab = 'Beta Post-Change Point - Chain 3')
+
 
 
 

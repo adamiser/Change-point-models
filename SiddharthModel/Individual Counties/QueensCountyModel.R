@@ -40,11 +40,11 @@ df <- read.csv("currentjoineddata.csv")
 
 df$week = as.Date(df$week)
 
-county = "AlleganyCounty"
+county = "QueensCounty"
 
 df = df %>% 
   arrange( week, country, state, key, lat, long, county,population) %>% 
-  filter(Recip_County == "Allegany County")
+  filter(Recip_County == "Queens County")
   
 
 # df = df %>% mutate(first_dose_prevalence = total_dose_one/population,
@@ -1292,7 +1292,7 @@ while(i > 0){
       #Getting inv Sigma_sp_22 to use for every iteration
       st_mat_inv = Sys.time()
       
-      SIGMA_v_sp_training = exp(- phi_v_sp_training * distance_mat_training)
+      SIGMA_v_sp_training = as.matrix(1)
       inv_SIGMA_v_sp_training = chol2inv(chol(SIGMA_v_sp_training))
       #log_det_SIGMA_v_sp_training = (determinant(SIGMA_v_sp_training, logarithm = TRUE))$modulus[1]
       
@@ -1392,7 +1392,7 @@ while(i > 0){
       
       #Getting the matrix division for U calculations##################################################################
       
-      SIGMA_u_sp_training = exp(- phi_u_sp_training * distance_mat_training)
+      SIGMA_u_sp_training = as.matrix(1)
       inv_SIGMA_u_sp_training = chol2inv(chol(SIGMA_u_sp_training))
       #log_det_SIGMA_u_sp_training = (determinant(SIGMA_u_sp_training, logarithm = TRUE))$modulus[1]
       
@@ -1687,6 +1687,10 @@ while(i > 0){
   # training_post_changepoint_df = training_df_clone %>% filter(week > changepoint_t_0_week)
   
   if(converged){
+    
+    save(beta_sample_chains_list_training, beta_star_sample_chains_list_training,
+     t0_sample_chains_list_training, converged_i,
+     file=paste(county, i, "iters.Rdata", sep = ""))
     
     #pi posterior
     st_pi = Sys.time()
@@ -2013,31 +2017,31 @@ while(i > 0){
     total_tt_sigma_eps_sq = total_tt_sigma_eps_sq + as.numeric(difftime(Sys.time(), st_sigma_eps_sq), units="secs")
     
     #phi_u_sp posterior arms########################################################################################
-    if(i==1 | i %% 20 == 0){
-      
-      st_phi_u_sp = Sys.time()
-      
-      phi_u_sp_log_density_vec_training = vector()
-      for(phi_u_sp_val in  phi_sp_vec_training){
-        
-        phi_u_sp_log_density_vec_training = c(phi_u_sp_log_density_vec_training, 
-                                              phi_u_sp_log_density_func(phi_u_sp_val))
-        
-        
-      }
-      
-      phi_u_sp_log_density_vec_training = (phi_u_sp_log_density_vec_training - max(phi_u_sp_log_density_vec_training))
-      
-      phi_u_sp_density_vec_training = exp(phi_u_sp_log_density_vec_training)
-      
-      const_prop_phi_u_sp = 1/sum(phi_u_sp_density_vec_training)
-      
-      phi_u_sp_training = sample(x = (phi_sp_vec_training), 1, replace = FALSE,
-                                 prob = round(phi_u_sp_density_vec_training * const_prop_phi_u_sp, digits = 3))
-      
-      phi_u_sp_preconvergence_training[mc] = phi_u_sp_training
-      total_tt_phi_u_sp = total_tt_phi_u_sp + as.numeric(difftime(Sys.time(), st_phi_u_sp), units="secs")
-    }
+    # if(i==1 | i %% 20 == 0){
+    #   
+    #   st_phi_u_sp = Sys.time()
+    #   
+    #   phi_u_sp_log_density_vec_training = vector()
+    #   for(phi_u_sp_val in  phi_sp_vec_training){
+    #     
+    #     phi_u_sp_log_density_vec_training = c(phi_u_sp_log_density_vec_training, 
+    #                                           phi_u_sp_log_density_func(phi_u_sp_val))
+    #     
+    #     
+    #   }
+    #   
+    #   phi_u_sp_log_density_vec_training = (phi_u_sp_log_density_vec_training - max(phi_u_sp_log_density_vec_training))
+    #   
+    #   phi_u_sp_density_vec_training = exp(phi_u_sp_log_density_vec_training)
+    #   
+    #   const_prop_phi_u_sp = 1/sum(phi_u_sp_density_vec_training)
+    #   
+    #   phi_u_sp_training = sample(x = (phi_sp_vec_training), 1, replace = FALSE,
+    #                              prob = round(phi_u_sp_density_vec_training * const_prop_phi_u_sp, digits = 3))
+    #   
+    #   phi_u_sp_preconvergence_training[mc] = phi_u_sp_training
+    #   total_tt_phi_u_sp = total_tt_phi_u_sp + as.numeric(difftime(Sys.time(), st_phi_u_sp), units="secs")
+    # }
     #phi_u_tmp posterior arms########################################################################################
     if(i==1 | i %% 20 == 0){
       
@@ -2118,31 +2122,31 @@ while(i > 0){
     #   total_tt_phi_w_tmp = total_tt_phi_w_tmp + as.numeric(difftime(Sys.time(), st_phi_w_tmp), units="secs")
     # }
     #phi_v_sp posterior arms########################################################################################
-    if(i==1 | i %% 20 == 0){
-      
-      st_phi_v_sp = Sys.time()
-      
-      phi_v_sp_log_density_vec_training = vector()
-      for(phi_v_sp_val in  phi_sp_vec_training){
-        
-        phi_v_sp_log_density_vec_training = c(phi_v_sp_log_density_vec_training, 
-                                              phi_v_sp_log_density_func(phi_v_sp_val))
-        
-        
-      }
-      
-      phi_v_sp_log_density_vec_training = (phi_v_sp_log_density_vec_training - max(phi_v_sp_log_density_vec_training))
-      
-      phi_v_sp_density_vec_training = exp(phi_v_sp_log_density_vec_training)
-      
-      const_prop_phi_v_sp = 1/sum(phi_v_sp_density_vec_training)
-      
-      phi_v_sp_training = sample(x = (phi_sp_vec_training), 1, replace = FALSE,
-                                 prob = round(phi_v_sp_density_vec_training * const_prop_phi_v_sp, digits = 3))
-      
-      phi_v_sp_preconvergence_training[mc] = phi_v_sp_training
-      total_tt_phi_v_sp = total_tt_phi_v_sp + as.numeric(difftime(Sys.time(), st_phi_v_sp), units="secs")
-    }
+    # if(i==1 | i %% 20 == 0){
+    #   
+    #   st_phi_v_sp = Sys.time()
+    #   
+    #   phi_v_sp_log_density_vec_training = vector()
+    #   for(phi_v_sp_val in  phi_sp_vec_training){
+    #     
+    #     phi_v_sp_log_density_vec_training = c(phi_v_sp_log_density_vec_training, 
+    #                                           phi_v_sp_log_density_func(phi_v_sp_val))
+    #     
+    #     
+    #   }
+    #   
+    #   phi_v_sp_log_density_vec_training = (phi_v_sp_log_density_vec_training - max(phi_v_sp_log_density_vec_training))
+    #   
+    #   phi_v_sp_density_vec_training = exp(phi_v_sp_log_density_vec_training)
+    #   
+    #   const_prop_phi_v_sp = 1/sum(phi_v_sp_density_vec_training)
+    #   
+    #   phi_v_sp_training = sample(x = (phi_sp_vec_training), 1, replace = FALSE,
+    #                              prob = round(phi_v_sp_density_vec_training * const_prop_phi_v_sp, digits = 3))
+    #   
+    #   phi_v_sp_preconvergence_training[mc] = phi_v_sp_training
+    #   total_tt_phi_v_sp = total_tt_phi_v_sp + as.numeric(difftime(Sys.time(), st_phi_v_sp), units="secs")
+    # }
     #phi_v_tmp posterior arms########################################################################################
     if(i==1 | i %% 20 == 0){
       
@@ -2458,9 +2462,10 @@ while(i > 0){
     
     
   }
-  if (i %% 500 == 0) {
+  if (i %% 2000 == 0) {
     save(beta_sample_chains_list_training, beta_star_sample_chains_list_training,
-     t0_sample_chains_list_training, file=paste(county, i, "iters.Rdata", sep = ""))
+     t0_sample_chains_list_training, 
+     file=paste(county, i, "iters.Rdata", sep = ""))
   }
   
   i = i+1
@@ -2540,6 +2545,23 @@ if(min_idx %% length(rho_vec_sp_training) == 0){
   phi_t = rho_vec_tmp_training[floor(min_idx/length(rho_vec_sp_training)) + 1]
 }
 return(c(phi_s, phi_t))
+
+n <- length(beta_sample_chains_list_training[[1]])
+
+par(mfrow = c(2, 3))
+plot(beta_sample_chains_list_training[[1]][1:n],
+     ylab = 'Beta Pre-Change Point - Chain 1')
+plot(beta_sample_chains_list_training[[2]][1:n],
+     ylab = 'Beta Pre-Change Point - Chain 2')
+plot(beta_sample_chains_list_training[[3]][1:n],
+     ylab = 'Beta Pre-Change Point - Chain 3')
+plot(beta_star_sample_chains_list_training[[1]][1:n],
+     ylab = 'Beta Post-Change Point - Chain 1')
+plot(beta_star_sample_chains_list_training[[2]][1:n],
+     ylab = 'Beta Post-Change Point - Chain 2')
+plot(beta_star_sample_chains_list_training[[3]][1:n],
+     ylab = 'Beta Post-Change Point - Chain 3')
+
 
 
 
