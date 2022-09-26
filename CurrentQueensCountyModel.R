@@ -2550,65 +2550,65 @@ save(beta_sample_chains_list_training, beta_star_sample_chains_list_training,
      t0_sample_chains_list_training, converged_i, 
      file=paste(county, i, "iters.Rdata", sep = ""))
 
-# n <- length(beta_sample_chains_list_training[[1]])
-# 
-# par(mfrow = c(1, 3))
-# plot(beta_sample_chains_list_training[[1]][1,],
-#      ylab = 'Beta1 Pre-Change Point - Chain 1',
-#      type = 'l')
-# plot(beta_sample_chains_list_training[[2]][1,],
-#      ylab = 'Beta1 Pre-Change Point - Chain 2',
-#      type = 'l')
-# plot(beta_sample_chains_list_training[[3]][1,],
-#      ylab = 'Beta1 Pre-Change Point - Chain 3',
-#      type = 'l')
-# 
-# plot(beta_sample_chains_list_training[[1]][2,],
-#      ylab = 'Beta2 Pre-Change Point - Chain 1',
-#      type = 'l')
-# plot(beta_sample_chains_list_training[[2]][2,],
-#      ylab = 'Beta2 Pre-Change Point - Chain 2',
-#      type = 'l')
-# plot(beta_sample_chains_list_training[[3]][2,],
-#      ylab = 'Beta2 Pre-Change Point - Chain 3',
-#      type = 'l')
-# 
-# plot(beta_sample_chains_list_training[[1]][3,],
-#      ylab = 'Beta3 Pre-Change Point - Chain 1',
-#      type = 'l')
-# plot(beta_sample_chains_list_training[[2]][3,],
-#      ylab = 'Beta3 Pre-Change Point - Chain 2',
-#      type = 'l')
-# plot(beta_sample_chains_list_training[[3]][3,],
-#      ylab = 'Beta3 Pre-Change Point - Chain 3',
-#      type = 'l')
-# 
-# plot(beta_star_sample_chains_list_training[[1]][1,],
-#      ylab = 'Beta1 Post-Change Point - Chain 1',
-#      type = 'l')
-# plot(beta_star_sample_chains_list_training[[2]][1,],
-#      ylab = 'Beta1 Post-Change Point - Chain 2',
-#      type = 'l')
-# plot(beta_star_sample_chains_list_training[[3]][1,],
-#      ylab = 'Beta1 Post-Change Point - Chain 3',
-#      type = 'l')
-# 
-# plot(beta_star_sample_chains_list_training[[1]][2,],
-#      ylab = 'Beta2 Post-Change Point - Chain 1',
-#      type = 'l')
-# plot(beta_star_sample_chains_list_training[[2]][2,],
-#      ylab = 'Beta2 Post-Change Point - Chain 2',
-#      type = 'l')
-# plot(beta_star_sample_chains_list_training[[3]][2,],
-#      ylab = 'Beta2 Post-Change Point - Chain 3',
-#      type = 'l')
-# 
-# plot(beta_star_sample_chains_list_training[[1]][3,],
-#      ylab = 'Beta3 Post-Change Point - Chain 1',
-#      type = 'l')
-# plot(beta_star_sample_chains_list_training[[2]][3,],
-#      ylab = 'Beta3 Post-Change Point - Chain 2',
-#      type = 'l')
-# plot(beta_star_sample_chains_list_training[[3]][3,],
-#      ylab = 'Beta3 Post-Change Point - Chain 3',
-#      type = 'l')
+n <- length(beta_sample_chains_list_training[[1]])
+
+par(mfrow = c(1, 3))
+plot(beta_sample_chains_list_training[[1]][1,],
+     ylab = 'Beta1 Pre-Change Point - Chain 1',
+     type = 'l')
+plot(beta_sample_chains_list_training[[2]][1,],
+     ylab = 'Beta1 Pre-Change Point - Chain 2',
+     type = 'l')
+plot(beta_sample_chains_list_training[[3]][1,],
+     ylab = 'Beta1 Pre-Change Point - Chain 3',
+     type = 'l')
+
+plot(beta_sample_chains_list_training[[1]][2,],
+     ylab = 'Beta2 Pre-Change Point - Chain 1',
+     type = 'l')
+plot(beta_sample_chains_list_training[[2]][2,],
+     ylab = 'Beta2 Pre-Change Point - Chain 2',
+     type = 'l')
+plot(beta_sample_chains_list_training[[3]][2,],
+     ylab = 'Beta2 Pre-Change Point - Chain 3',
+     type = 'l')
+
+plot(beta_sample_chains_list_training[[1]][3,],
+     ylab = 'Beta3 Pre-Change Point - Chain 1',
+     type = 'l')
+plot(beta_sample_chains_list_training[[2]][3,],
+     ylab = 'Beta3 Pre-Change Point - Chain 2',
+     type = 'l')
+plot(beta_sample_chains_list_training[[3]][3,],
+     ylab = 'Beta3 Pre-Change Point - Chain 3',
+     type = 'l')
+
+plot(beta_star_sample_chains_list_training[[1]][1,],
+     ylab = 'Beta1 Post-Change Point - Chain 1',
+     type = 'l')
+plot(beta_star_sample_chains_list_training[[2]][1,],
+     ylab = 'Beta1 Post-Change Point - Chain 2',
+     type = 'l')
+plot(beta_star_sample_chains_list_training[[3]][1,],
+     ylab = 'Beta1 Post-Change Point - Chain 3',
+     type = 'l')
+
+plot(beta_star_sample_chains_list_training[[1]][2,],
+     ylab = 'Beta2 Post-Change Point - Chain 1',
+     type = 'l')
+plot(beta_star_sample_chains_list_training[[2]][2,],
+     ylab = 'Beta2 Post-Change Point - Chain 2',
+     type = 'l')
+plot(beta_star_sample_chains_list_training[[3]][2,],
+     ylab = 'Beta2 Post-Change Point - Chain 3',
+     type = 'l')
+
+plot(beta_star_sample_chains_list_training[[1]][3,],
+     ylab = 'Beta3 Post-Change Point - Chain 1',
+     type = 'l')
+plot(beta_star_sample_chains_list_training[[2]][3,],
+     ylab = 'Beta3 Post-Change Point - Chain 2',
+     type = 'l')
+plot(beta_star_sample_chains_list_training[[3]][3,],
+     ylab = 'Beta3 Post-Change Point - Chain 3',
+     type = 'l')

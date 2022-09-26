@@ -1,0 +1,16 @@
+Albany - No convergence (all chains are okay)
+Allegany - No convergence, didn't make it through (1)
+Bronx - No convergence, didn't make it through (439)
+Broome - No convergence, didn't make it through (4038)
+Cattaraugus - No convergence (Chain 1 is okay, other chains are not)
+Cayuga - No convergence (Chain 1 is okay, other chains are not)
+Chautauqua - No convergence, didn't make it through (501)
+Chemung - No convergence, didn't make it through (1)
+Chenango - No convergence (Chain 1 is okay, other chains are not)
+Clinton - No convergence (all chains are okay)
+
+
+
+
+
+
