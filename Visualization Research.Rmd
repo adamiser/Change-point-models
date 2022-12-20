@@ -1,0 +1,266 @@
+---
+title: "Untitled"
+author: "Abe Durrant"
+date: '2022-11-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+dat <- read.csv("currentjoineddata.csv")
+counties <- unique(dat$Recip_County)
+n.counties <- length(counties)
+populations <- unique(dat$population)
+
+
+fipscodes <- read.table(header=F, sep=" ", text="
+    36001        Albany County
+    36003        Allegany County
+    36005        Bronx County
+    36007        Broome County
+    36009        Cattaraugus County
+    36011        Cayuga County
+    36013        Chautauqua County
+    36015        Chemung County
+    36017        Chenango County
+    36019        Clinton County
+    36021        Columbia County
+    36023        Cortland County
+    36025        Delaware County
+    36027        Dutchess County
+    36029        Erie County
+    36031        Essex County
+    36033        Franklin County
+    36035        Fulton County
+    36037        Genesee County
+    36039        Greene County
+    36041        Hamilton County
+    36043        Herkimer County
+    36045        Jefferson County
+    36047        Kings County
+    36049        Lewis County
+    36051        Livingston County
+    36053        Madison County
+    36055        Monroe County
+    36057        Montgomery County
+    36059        Nassau County
+    36061        NewYork County
+    36063        Niagara County
+    36065        Oneida County
+    36067        Onondaga County
+    36069        Ontario County
+    36071        Orange County
+    36073        Orleans County
+    36075        Oswego County
+    36077        Otsego County
+    36079        Putnam County
+    36081        Queens County
+    36083        Rensselaer County
+    36085        Richmond County
+    36087        Rockland County
+    36089        StLawrence County
+    36091        Saratoga County
+    36093        Schenectady County
+    36095        Schoharie County
+    36097        Schuyler County
+    36099        Seneca County
+    36101        Steuben County
+    36103        Suffolk County
+    36105        Sullivan County
+    36107        Tioga County
+    36109        Tompkins County
+    36111        Ulster County
+    36113        Warren County
+    36115        Washington County
+    36117        Wayne County
+    36119        Westchester County
+    36121        Wyoming County
+    36123        Yates County
+")
+fipscodes <- fipscodes[,c(5,13)]
+names(fipscodes)=c("fips", "county")
+fipscodes[45:50,] <- fipscodes[c(46:50,45),]
+
+
+
+
+df <- data.frame("County"=counties, "Population"=populations, 
+                 "ChangePoint_Ord"=rep(NA,length(counties)), 
+                 "ChangePointRange_Ord"=rep(NA,length(counties)),
+                 "Beta0"=rep(NA,length(counties)),
+                 "Beta0*"=rep(NA,length(counties)),
+                 "Beta1death_Ord"=rep(NA,length(counties)),
+                 "Beta1*death_Ord"=rep(NA,length(counties)),
+                 "Beta2vax_Ord"=rep(NA,length(counties)),
+                 "Beta2*vax_Ord"=rep(NA,length(counties)),
+                 "Beta1deathRange_Ord"=rep(NA,length(counties)),
+                 "Beta2vaxRange_Ord"=rep(NA,length(counties)),
+                 "Beta1*deathRange_Ord"=rep(NA,length(counties)),
+                 "Beta2*vaxRange_Ord"=rep(NA,length(counties)),
+                 "fips"=fipscodes$fips)
+
+df <- read.csv("CountyChangePoints1130.csv")
+library(ggplot2)
+library(usmap)
+library(gridExtra)
+unique(df$County)
+```
+
+
+```{r}
+# beta_sample1 B0
+# beta_sample2 Previous Death
+# beta_sample3 Vaccine
+#list <- c("counties")
+# for (i in list) {
+#   load('Completed Counties/Delaware County5740.Rdata')
+#   df[df$County == i, ]$ChangePoint_Ord <- mean(t_0_sample_training)
+# }
+# load('More Counties/Nassau County9890iters.Rdata')
+# #unique(df$County)
+# current_county <- "Nassau County"
+# df[df$County == current_county, 3] = mean(t_0_sample_training)
+# df[df$County == current_county, 4] = range(t_0_sample_training)[2] - range(t_0_sample_training)[1]
+# df[df$County == current_county, 5] = mean(beta_sample_training[1,])
+# df[df$County == current_county, 6] = mean(beta_star_sample_training[1,])
+# df[df$County == current_county, 7] = mean(beta_sample_training[2,])
+# df[df$County == current_county, 8] = mean(beta_star_sample_training[2,])
+# df[df$County == current_county, 9] = mean(beta_sample_training[3, ])
+# df[df$County == current_county, 10] = mean(beta_star_sample_training[3,])
+# 
+# df <- read.csv("CountyChangePoints.csv")[,2:16]
+#write.csv(df, "CountyChangePoints1130.csv", row.names = FALSE)
+```
+
+
+```{r}
+plot_usmap(data=df, values="ChangePoint_Ord", include="New York") + scale_fill_continuous(name="Week of Change Point") + 
+  theme(legend.position='right') + 
+  ggtitle("Mean Change Points Mapped Across NY")
+```
+
+```{r chptpop, fig.align='center', fig.height=3.5, fig.width=4}
+plot(df$ChangePoint_Ord, log(df$Population), 
+     ylab = "log(Population)",
+     xlab = "Change Point (Ordinal Response)",
+     main = "Population vs. Change Point")
+```
+```{r}
+plot_usmap(data=df, values="ChangePointRange_Ord", include="New York") + scale_fill_continuous(name="Change Point Range") + 
+  theme(legend.position='right') + 
+  ggtitle("Mean Change Points Mapped Across NY")
+```
+
+Betas
+```{r}
+plot_usmap(data=df, values="Beta1death_Ord", include="New York") + scale_fill_continuous(name="Beta 1") + 
+  theme(legend.position='right') + 
+  ggtitle("Mean Beta Log Previous Death Mapped Across NY")
+```
+```{r}
+plot_usmap(data=df, values="Beta1.death_Ord", include="New York") + scale_fill_continuous(name="Beta 1*") + 
+  theme(legend.position='right') + 
+  ggtitle("Mean Beta* Log Previous Death Mapped Across NY")
+```
+
+
+```{r}
+plot_usmap(data=df, values="Beta2vax_Ord", include="New York") + scale_fill_continuous(name="Beta 2") + 
+  theme(legend.position='right') + 
+  ggtitle("Mean Beta Vaccine Death Mapped Across NY")
+```
+
+```{r}
+plot_usmap(data=df, values="Beta2.vax_Ord", include="New York") + scale_fill_continuous(name="Beta 2*") + 
+  theme(legend.position='right') + 
+  ggtitle("Mean Beta* Vaccine Mapped Across NY")
+```
+
+```{r}
+fourcounties <- dat[dat$county == "Queens" | dat$county == "Albany" | dat$county == "Niagara" | dat$county == "Suffolk", ]
+fourcounties$TimePeriod <- rep(1:122, 4)
+vaccineplot <- 
+  ggplot(data = fourcounties, mapping = aes(x = TimePeriod, y = first_dose_prevalence, col = county)) + geom_point() + xlab("Week") + ylab("First Dose Prevalence") + theme(legend.position = c(0.1, 0.8)) + scale_colour_brewer(palette = "Spectral")
+ggsave("Vaccine.png", plot = vaccineplot)
+```
+
+```{r}
+Albany <- dat[dat$county == "Albany",]
+Albany$TimePeriod <- 1:122
+Queens <- dat[dat$county == "Queens",]
+Queens$TimePeriod <- 1:122
+Suffolk <- dat[dat$county == "Suffolk",]
+Suffolk$TimePeriod <- 1:122
+Niagara <- dat[dat$county == "Niagara",]
+Niagara$TimePeriod <- 1:122
+albanyplot <- ggplot(data = Albany, mapping = aes(x = TimePeriod, y = category)) + geom_line() + xlab("Week") + ylab("Transmission Level") + theme(legend.position = c(0.1, 0.8))
+queensplot <- ggplot(data = Queens, mapping = aes(x = TimePeriod, y = category)) + geom_line() + xlab("Week") + ylab("Transmission Level") + theme(legend.position = c(0.1, 0.8))
+suffolkplot <- ggplot(data = Suffolk, mapping = aes(x = TimePeriod, y = category)) + geom_line() + xlab("Week") + ylab("Transmission Level") + theme(legend.position = c(0.1, 0.8))
+niagaraplot <- ggplot(data = Niagara, mapping = aes(x = TimePeriod, y = category)) + geom_line() + xlab("Week") + ylab("Transmission Level") + theme(legend.position = c(0.1, 0.8))
+ggsave("albany.png", plot = albanyplot)
+ggsave("queens.png", plot = queensplot)
+ggsave("suffolk.png", plot = suffolkplot)
+ggsave("niagara.png", plot = niagaraplot)
+```
+
+```{r}
+ggplot(data = Albany, mapping = aes(x = TimePeriod, y = new_cases)) + geom_line() + xlab("Week") + ylab("First Dose Prevalence") + theme(legend.position = c(0.1, 0.8))
+ggplot(data = Queens, mapping = aes(x = TimePeriod, y = new_cases)) + geom_line() + xlab("Week") + ylab("First Dose Prevalence") + theme(legend.position = c(0.1, 0.8))
+ggplot(data = Suffolk, mapping = aes(x = TimePeriod, y = new_cases)) + geom_line() + xlab("Week") + ylab("First Dose Prevalence") + theme(legend.position = c(0.1, 0.8))
+ggplot(data = Niagara, mapping = aes(x = TimePeriod, y = new_cases)) + geom_line() + xlab("Week") + ylab("First Dose Prevalence") + theme(legend.position = c(0.1, 0.8))
+```
+```{r}
+table(dat$category)/7564
+#Add column to categories table with proportion
+#Make summary table 
+#Number of counties
+#Summaries for variables (mean, range)
+```
+
+```{r}
+queens.ts = ts(Queens$category, start = c(2020,3), frequency = 52)
+plot.ts(queens.ts)
+
+library(astsa)
+acf(queens.ts)
+pacf(queens.ts)
+
+albany.ts = ts(Albany$category, start = c(2020,3), frequency = 52)
+acf(albany.ts)
+pacf(albany.ts)
+```
+```{r}
+library(knitr)
+library(xtable)
+categories <- data.frame("New Cases per 100,000" = c("0 - 9.99", "10 - 49.99", "50 - 99.99", ">100"), "Category" = c(1, 2, 3, 4))
+categories %>% xtable()
+```
+```{r}
+ggplot(data = Queens, mapping = aes(x = prev_log_new_death, y = category)) + geom_point() + xlab("Log Previous Week's Death") + ylab("Case Category")
+ggplot(data = Queens, mapping = aes(x = prev_log_new_death, y = new_cases)) + geom_point() + xlab("Log Previous Week's Death") + ylab("Case Category")
+```
+
+```{r}
+by_category <- dat %>% group_by(category)
+by_category %>% summarise(
+  response = mean(prev_log_new_death)
+)
+by_category %>% summarise(
+  response = mean(first_dose_prevalence)
+)
+```
+
+```{r}
+table(dat$county, dat$category)
+```
+```{r}
+quantile(dat$first_dose_prevalence, c(.25,.75))
+table_one <- data.frame("Variable Name" = c("Log Previous Death", "Vaccine First Dose Prevalence"), "Mean" = c(-0.329, 0.312), "IQR" = c("-2.303 to 1.411", "0 to 0.6177"), "SD" = c(2.138, 0.319))
+table_one %>% xtable()
+```
+```{r}
+library(nimble)
+print(citation('nimble', bibtex = TRUE))
+```
+
